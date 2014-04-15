@@ -51,12 +51,14 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
 
         image_pfm = convert_to_pfm(imread(unicode(file_path)))
         image = image_to_gray(image_pfm)
-        kernel = 2
+        kernel = self.ksize_slider.value()
+        print('ksize: %d' % kernel)
         cornerness = harris_corner(image, ksize=kernel)
         is_corner = cornerness > 0.0001
         suppress = non_max_suppression(cornerness, ksize=kernel)
         result = np.array(is_corner * suppress)
-        gray_img = np.dstack((result, result, result))
+        zero = np.zeros_like(result)
+        gray_img = np.dstack((result, zero, zeros))
 
         self.image_label.setPixmap(QPixmap.fromImage(imageFromNdArray(np.array(gray_img + image_pfm))))
 

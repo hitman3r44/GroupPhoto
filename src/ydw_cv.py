@@ -203,7 +203,7 @@ def make_border(mask):
 
 
 # Efficient Non-maximum Suppression
-def eff_non_max_suppression(mat, ksize=3):
+def eff_non_max_suppression(mat, ksize):
     assert len(mat.shape) == 2, 'Matrix must be 2d array.'
     ret = np.ndarray(mat.shape, dtype=np.bool)
     [h, w] = mat.shape
@@ -230,7 +230,7 @@ def eff_non_max_suppression(mat, ksize=3):
     return ret
 
 
-def slow_max_filter(mat, ksize=3):
+def slow_max_filter(mat, ksize):
     assert len(mat.shape) == 2, 'Matrix must be 2d array'
     ret = np.ndarray(mat.shape, dtype=np.float)
     [h, w] = mat.shape
@@ -249,6 +249,7 @@ def slow_non_max_suppression(mat, ksize=3):
 
 
 def non_max_suppression(mat, ksize=3):
+    # return slow_max_filter(mat, ksize=ksize) == mat
     return eff_non_max_suppression(mat, ksize=ksize)
 
 
