@@ -1,0 +1,7 @@
+<RCC>
+  <qresource>
+    <file>placeholder.png</file>
+    <file>icon.ico</file>
+    <file>screenshot.png</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,59 @@
+{
+    "build_systems":
+    [
+        {
+            "cmd":
+            [
+                "python",
+                "src/group_photo.py"
+            ],
+            "name": "group_photo",
+            "variants":
+            [
+                {
+                    "cmd":
+                    [
+                        "pyuic4-2.7",
+                        "src/main_win.ui",
+                        "-o",
+                        "src/main_win.py"
+                    ],
+                    "name": "Compile UI"
+                },
+                {
+                    "cmd":
+                    [
+                        "pyrcc4-2.7",
+                        "res/images.qrc",
+                        "-o",
+                        "src/images_rc.py"
+                    ],
+                    "name": "Compile resources"
+                },
+                {
+                    "cmd":
+                    [
+                        "python",
+                        "-m",
+                        "unittest",
+                        "ydw_cv_test"
+                    ],
+                    "name": "Run",
+                    "working_dir": "${project_path:}/test"
+                }
+            ],
+            "working_dir": "${project_path:}"
+        }
+    ],
+    "folders":
+    [
+        {
+            "follow_symlinks": true,
+            "path": "."
+        },
+        {
+            "follow_symlinks": true,
+            "path": "/Users/yangdawei/Workspace/GroupPhoto"
+        }
+    ]
+}
