@@ -205,27 +205,30 @@ def make_border(mask):
 # Efficient Non-maximum Suppression
 def eff_non_max_suppression(mat, ksize):
     assert len(mat.shape) == 2, 'Matrix must be 2d array.'
-    ret = np.ndarray(mat.shape, dtype=np.bool)
+    ret = np.zeros(mat.shape, dtype=np.bool)
     [h, w] = mat.shape
+    n = ksize
 
-    for i in range(0, h - ksize, ksize + 1):
-        for j in range(0, w - ksize, ksize + 1):
+    for i in range(n, h - n + 1, w + 1):
+        for j in range(n, w - n + 1, n + 1):
             mi, mj = i, j
-            for i2 in range(i, i + ksize):
-                for j2 in range(j, j + ksize):
-                    if mat[i2, j2] > mat[mi, mj]:
+            for i2 in range(i, i + n + 1):
+                for j2 in range(j, j + n + 1):
+                    if mat[i2][j2] > mat[mi][mj]:
                         mi, mj = i2, j2
+
             failed = False
-            for i2 in range(mi - ksize, mi + ksize):
-                for j2 in range(mj - ksize, mj + ksize):
-                    if i2 >= i and i2 <= i + ksize and j2 >= j and j2 <= j + ksize:
+            for i2 in range(mi - n, mi + n + 1):
+                for j2 in range(mj - n, mj + n + 1):
+                    if i2 >= i and i2 <= i+n and j2 >= j and j2 <= j+n:
                         continue
-                    if mat[i2, j2] > mat[i, j]:
+                    if mat[i2][j2] > mat[i][j]:
                         failed = True
                         break
                 if failed:
                     break
-            ret[mi, mj] = not failed
+            if not failed:
+                ret[mi][mj] = True
 
     return ret
 

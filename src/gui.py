@@ -58,7 +58,7 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
         suppress = non_max_suppression(cornerness, ksize=kernel)
         result = np.array(is_corner * suppress)
         zero = np.zeros_like(result)
-        gray_img = np.dstack((result, zero, zeros))
+        gray_img = np.dstack((zero, zero, result))
 
         self.image_label.setPixmap(QPixmap.fromImage(imageFromNdArray(np.array(gray_img + image_pfm))))
 
@@ -67,7 +67,9 @@ def imageFromNdArray(mat):
     scaled = mat * 256
     [h, w, d] = mat.shape
     clipped = np.clip(scaled, 0, 255)
-    a = np.asarray(clipped, np.uint8)
+    a = np.array(clipped, np.uint8)
     imshow('test', a)
+    print a[:, :, 0]
+    print a[:, :, 0] << 16
     b = (255 << 24 | a[:, :, 0] << 16 | a[:, :, 1] << 8 | a[:, :, 2]).flatten()
     return QImage(b, w, h, QImage.Format_RGB32)
