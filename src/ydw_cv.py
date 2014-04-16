@@ -108,8 +108,7 @@ def resize(image, ratio, method=LINEAR):
     elif method == NEAREST:
         ret = cv2.resize(image, (w, h), interpolation=cv2.INTER_NEAREST)
     else:
-        print method
-        assert False
+        assert False, 'Unrecognized method {}'.format(method)
 
     return ret
 
@@ -209,8 +208,8 @@ def eff_non_max_suppression(mat, ksize):
     [h, w] = mat.shape
     n = ksize
 
-    for i in range(n, h - n+1, n + 1):
-        for j in range(n, w - n+1, n + 1):
+    for i in range(n, h - n, n + 1):
+        for j in range(n, w - n, n + 1):
             mi, mj = i, j
             for i2 in range(i, i + n + 1):
                 for j2 in range(j, j + n + 1):

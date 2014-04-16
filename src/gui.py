@@ -52,24 +52,37 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
         image_pfm = convert_to_pfm(imread(unicode(file_path)))
         image = image_to_gray(image_pfm)
         kernel = self.ksize_slider.value()
-        print('ksize: %d' % kernel)
         cornerness = harris_corner(image, ksize=kernel)
         is_corner = cornerness > 0.0001
         suppress = non_max_suppression(cornerness, ksize=kernel)
         result = np.array(is_corner * suppress)
         zero = np.zeros_like(result)
-        gray_img = np.dstack((zero, zero, result))
+        gray_img = np.dstack((zero, zero, draw_cross(result)))
 
-        self.image_label.setPixmap(QPixmap.fromImage(imageFromNdArray(np.array(gray_img + image_pfm))))
+        self.image_label.setPixmap(QPixmap.fromImage(image_from_ndarray(np.array(gray_img + image_pfm))))
 
 
-def imageFromNdArray(mat):
+def image_from_ndarray(mat):
     scaled = mat * 256
     [h, w, d] = mat.shape
     clipped = np.clip(scaled, 0, 255)
     a = np.array(clipped, np.uint8)
-    imshow('test', a)
-    print a[:, :, 0]
-    print a[:, :, 0] << 16
-    b = (255 << 24 | a[:, :, 0] << 16 | a[:, :, 1] << 8 | a[:, :, 2]).flatten()
-    return QImage(b, w, h, QImage.Format_RGB32)
+    bgra = np.empty((h, w, 4), np.uint8)
+    bgra[..., 0] = a[..., 0]
+    bgra[..., 1] = a[..., 1]
+    bgra[..., 2] = a[..., 2]
+    bgra[..., 3].fill(255)
+    return QImage(bgra.data, w, h, QImage.Format_RGB32)
+
+
+def draw_cross(mat):
+    [h, w] = mat.shape
+    mat_u1 = np.roll(mat, 1, axis=0)
+    mat_u2 = np.roll(mat_u1, 1, axis=0)
+    mat_d1 = np.roll(mat, -1, axis=0)
+    mat_d2 = np.roll(mat_d1, -1, axis=0)
+    mat_l1 = np.roll(mat, 1, axis=1)
+    mat_l2 = np.roll(mat_l1, 1, axis=1)
+    mat_r1 = np.roll(mat, -1, axis=1)
+    mat_r2 = np.roll(mat_r1, -1, axis=1)
+    return mat + mat_u1 + mat_u2 + mat_d1 + mat_d2 + mat_l1 + mat_l2 + mat_r1 + mat_r2
