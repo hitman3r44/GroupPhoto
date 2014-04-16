@@ -209,8 +209,8 @@ def eff_non_max_suppression(mat, ksize):
     [h, w] = mat.shape
     n = ksize
 
-    for i in range(n, h - n + 1, w + 1):
-        for j in range(n, w - n + 1, n + 1):
+    for i in range(n, h - n+1, n + 1):
+        for j in range(n, w - n+1, n + 1):
             mi, mj = i, j
             for i2 in range(i, i + n + 1):
                 for j2 in range(j, j + n + 1):
@@ -218,11 +218,12 @@ def eff_non_max_suppression(mat, ksize):
                         mi, mj = i2, j2
 
             failed = False
-            for i2 in range(mi - n, mi + n + 1):
-                for j2 in range(mj - n, mj + n + 1):
+            for i2 in range(mi - n, min(mi + n + 1, h)):
+                for j2 in range(mj - n, min(mj + n + 1, w)):
                     if i2 >= i and i2 <= i+n and j2 >= j and j2 <= j+n:
                         continue
-                    if mat[i2][j2] > mat[i][j]:
+                    if mat[i2][j2] > mat[mi][mj]:
+                        # print (i2, j2), '>', (mi, mj)
                         failed = True
                         break
                 if failed:
