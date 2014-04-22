@@ -219,7 +219,7 @@ def eff_non_max_suppression(mat, ksize):
             failed = False
             for i2 in range(mi - n, min(mi + n + 1, h)):
                 for j2 in range(mj - n, min(mj + n + 1, w)):
-                    if i2 >= i and i2 <= i+n and j2 >= j and j2 <= j+n:
+                    if i2 >= i and i2 <= i + n and j2 >= j and j2 <= j + n:
                         continue
                     if mat[i2][j2] > mat[mi][mj]:
                         # print (i2, j2), '>', (mi, mj)
@@ -283,3 +283,14 @@ def image_to_gray(image):
 
 def gradient(mat):
     return (convolve1d(mat, GRAD_KERN, axis=0, mode="nearest"), convolve1d(mat, GRAD_KERN, axis=1, mode="nearest"))
+
+
+def sift(mat, keypoint):
+    pass
+
+
+def stitch(*args):
+    assert args == 2, 'stitch() only supporet two image!'
+    image1 = args[0];
+    image2 = args[1];
+    

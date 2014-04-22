@@ -23,6 +23,7 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
         QObject.connect(self.image_list.selectionModel(), QtCore.SIGNAL(
             'currentChanged (const QModelIndex &, const QModelIndex &)'), self.on_row_changed)
         QObject.connect(self.harris_btn, QtCore.SIGNAL('clicked()'), self.on_harris_detect)
+        QObject.connect(self.stitch_btn, QtCore.SIGNAL('clicked()'), self.on_stitch)
 
     def on_add_image(self):
         image_path = QFileDialog.getOpenFileName(self, 'Select image', filter='Images (*.png *.jpg *.bmp)')
@@ -60,6 +61,16 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
         gray_img = np.dstack((zero, zero, draw_cross(result)))
 
         self.image_label.setPixmap(QPixmap.fromImage(image_from_ndarray(np.array(gray_img + image_pfm))))
+
+    def on_stitch(self):
+        i = 0
+        images = []
+        while self.image_model.item(i):
+            i += 1
+            filepath = self.image_model.item(i, 1)
+            image = image_to_gray(convert_to_pfm(imread(unicode(filepath))))
+            images.append(image)
+        stitch(images)
 
 
 def image_from_ndarray(mat):

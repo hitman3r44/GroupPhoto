@@ -193,14 +193,14 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
-             <widget class="QLabel" name="label">
+             <widget class="QLabel" name="scale_lbl">
               <property name="font">
                <font>
                 <family>Lucida Grande</family>
                </font>
               </property>
               <property name="text">
-               <string>ksize</string>
+               <string>Scale</string>
               </property>
              </widget>
             </item>

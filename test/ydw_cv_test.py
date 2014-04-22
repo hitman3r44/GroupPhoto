@@ -11,14 +11,13 @@ class YdwCvTest(unittest.TestCase):
     def setUp(self):
         self.image = image_to_gray(convert_to_pfm(imread('../res/screenshot.png')))
 
-    '''def test_gradient(self):
+    def test_gradient(self):
         namedWindow('testx')
         namedWindow('testy')
         dx, dy = gradient(self.image)
         imshow('testx', dx)
         imshow('testy', dy)
         waitKey()
-    '''
 
     def test_harris_corner(self):
         kernel = 2
@@ -30,11 +29,10 @@ class YdwCvTest(unittest.TestCase):
         imshow('image without non_max_suppression', np.array(is_corner, np.float) + self.image)
         imshow('image with non_max_suppression', np.array(is_corner * suppress) + self.image)
         waitKey()
-    '''
+
     def test_max_filter(self):
         image = np.array([[1, 2, 3], [2, 3, 1], [5, 2, 4]])
         print max_filter(image, ksize=1)
-    '''
 
     def tearDown(self):
         pass
