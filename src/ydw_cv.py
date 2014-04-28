@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import scipy.sparse
 import scipy.sparse.linalg
-from math import ceil, exp, pi
+from math import ceil, exp, pi, cos, sin
 from scipy.ndimage import convolve1d, gaussian_filter
 
 LINEAR = 'ydwCv_linear'
@@ -333,15 +333,69 @@ def sift_descriptor(img, pt, ksize):
             max_ind2 = i
 
     convert = lambda x: (x - 18) * pi / 18
-
-    # print max_val, max_val2
+    directions = tuple()
 
     if max_val * 0.8 < max_val2:
-        # print (convert(max_ind), convert(max_ind2))
-        return (convert(max_ind), convert(max_ind2))
+        directions = (convert(max_ind), convert(max_ind2))
     else:
-        # print convert(max_ind)
-        return (convert(max_ind),)
+        directions = (convert(max_ind),)
+
+    descriptors = np.ndarray((len(directions), 128), np.float)
+    for seq, theta in enumerate(directions):
+        block = gen_block(img, pt, theta)
+        descriptor = np.zeros((128), np.float)
+        idx = 0
+        for i in range(0, 16, 4):
+            for j in range(0, 16, 4):
+                roi = block[i:i+4, j:j+4]
+                gx, gy = gradient(roi)
+                mag = (np.sqrt(gx * gx + gy * gy)).flatten()
+                ang = (np.arctan2(gy, gx) / pi * 180).flatten()
+                indices = np.searchsorted(np.arange(-180 + 22.5, 180 + 22.5, 45), ang)
+
+                hist = np.zeros(8)
+                for k in range(indices.shape[0]):
+                    hist[indices[k] % 8] += mag[k]
+
+                descriptor[idx:idx+8] = hist[:]
+                idx += 8
+        assert idx == 128, 'Error!'
+        descriptor = descriptor / np.linalg.norm(descriptor)
+        descriptors[seq, :] = descriptor[:]
+
+    print descriptors
+
+
+def gen_block(img, pt, theta):
+    ret = np.ndarray((16,) * 2, np.float)
+    for i in range(16):
+        for j in range(16):
+            y = i - 7.5
+            x = j - 7.5
+            ct = cos(theta)
+            st = sin(theta)
+            xr = x * ct - y * st
+            yr = x * st + y * ct
+            ret[i][j] = texture(img, yr + pt[0], xr + pt[1])
+    return ret
+
+
+def texture(mat, row, col):
+    '''
+    Bilinear interpolation of grayscale 2d image.
+    '''
+    assert len(mat.shape) == 2, 'texture only support 2d-matrix!'
+    [h, w] = mat.shape
+    if row < 0 or col < 0 or row > h - 1 or col > w - 1:
+        return 0.0
+    else:
+        r = int(row)
+        c = int(col)
+        rb = row - r
+        cb = col - c
+        ra = 1 - rb
+        ca = 1 - cb
+        return mat[r][c] * ra * ca + mat[r][c + 1] * ra * cb + mat[r + 1][c] * rb * ca + mat[r + 1][c + 1] * rb * cb
 
 
 def stitch(ksize, *args):

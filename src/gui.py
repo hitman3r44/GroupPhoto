@@ -42,7 +42,7 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
             file_path = PLACE_HOLDER
         else:
             file_path = self.image_model.item(row, 1).text()
-        self.image_label.setPixmap(QPixmap(file_path))
+        self.set_pixmap(QPixmap(file_path))
 
     def on_harris_detect(self):
         row = self.image_list.selectionModel().currentIndex().row()
@@ -54,13 +54,13 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
         image = image_to_gray(image_pfm)
         kernel = self.ksize_slider.value()
         cornerness = harris_corner(image, ksize=kernel)
-        is_corner = cornerness > 0.0001
+        is_corner = cornerness > 0.000001
         suppress = non_max_suppression(cornerness, ksize=kernel)
         result = np.array(is_corner * suppress)
         zero = np.zeros_like(result)
         gray_img = np.dstack((zero, zero, draw_cross(result)))
 
-        self.image_label.setPixmap(QPixmap.fromImage(image_from_ndarray(np.array(gray_img + image_pfm))))
+        self.set_pixmap(QPixmap.fromImage(image_from_ndarray(np.array(gray_img + image_pfm))))
 
     def on_stitch(self):
         i = 0
@@ -71,6 +71,9 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
             image = image_to_gray(convert_to_pfm(imread(unicode(filepath))))
             images.append(image)
         stitch(images)
+
+    def set_pixmap(self, pixmap):
+        self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio))
 
 
 def image_from_ndarray(mat):
