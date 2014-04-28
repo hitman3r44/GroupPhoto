@@ -36,9 +36,20 @@
                         "python",
                         "-m",
                         "unittest",
-                        "ydw_cv_test"
+                        "ydw_cv_test.YdwCvTest.test_gaussian"
                     ],
-                    "name": "Run",
+                    "name": "test_gaussian",
+                    "working_dir": "${project_path:}/test"
+                },
+                {
+                    "cmd":
+                    [
+                        "python",
+                        "-m",
+                        "unittest",
+                        "ydw_cv_test.YdwCvTest.test_sift_descriptor"
+                    ],
+                    "name": "test_sift_descriptor",
                     "working_dir": "${project_path:}/test"
                 }
             ],

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import scipy.sparse
 import scipy.sparse.linalg
-from math import ceil
+from math import ceil, exp, pi
 from scipy.ndimage import convolve1d, gaussian_filter
 
 LINEAR = 'ydwCv_linear'
@@ -282,15 +282,81 @@ def image_to_gray(image):
 
 
 def gradient(mat):
-    return (convolve1d(mat, GRAD_KERN, axis=0, mode="nearest"), convolve1d(mat, GRAD_KERN, axis=1, mode="nearest"))
+    return (convolve1d(mat, GRAD_KERN, axis=1, mode="nearest"), convolve1d(mat, GRAD_KERN, axis=0, mode="nearest"))
 
 
-def sift(mat, keypoint):
-    pass
+def gaussian(height, width, center, sigma):
+    mat = np.ndarray((height, width), np.float)
+    for i in range(height):
+        for j in range(width):
+            x = i - center[0]
+            y = j - center[1]
+            mat[i][j] = exp((-x * x - y * y) / (2.0 * sigma * sigma))
+    return mat
 
 
-def stitch(*args):
-    assert args == 2, 'stitch() only supporet two image!'
-    image1 = args[0];
-    image2 = args[1];
-    
+def sift_descriptor(img, pt, ksize):
+    roi = img[pt[0] - ksize:pt[0] + ksize + 1, pt[1] - ksize:pt[1] + ksize + 1]
+    h, w = roi.shape
+    center = (min(ksize, pt[0]), min(ksize, pt[1]))
+
+    gx, gy = gradient(roi)
+    mag = (np.sqrt(gx * gx + gy * gy) * gaussian(h, w, center, 1.5 * ksize)).flatten()
+
+    ang = (np.arctan2(gy, gx) / pi * 180).flatten()
+    indices = np.searchsorted(np.arange(-175, 185, 10), ang)
+
+    hist = np.zeros((36))
+    for i in range(indices.shape[0]):
+        hist[indices[i] % 36] += mag[i]
+
+    # print roi
+    # print gx
+    # print gy
+    # print (np.sqrt(gx * gx + gy * gy) * gaussian(h, w, center, 1.5 * ksize))
+    # print (np.arctan2(gy, gx) / pi * 180)
+    # print hist
+
+    max_ind = 0
+    max_ind2 = 1
+    max_val = hist[0]
+    max_val2 = hist[1]
+    if max_val < max_val2:
+        max_val, max_val2 = max_val2, max_val
+        max_ind, max_ind2 = max_ind2, max_ind
+    for i in range(2, hist.shape[0]):
+        if max_val < hist[i]:
+            max_val, max_val2 = hist[i], max_val
+            max_ind, max_ind2 = i, max_ind
+        elif max_val2 < hist[i]:
+            max_val2 = hist[i]
+            max_ind2 = i
+
+    convert = lambda x: (x - 18) * pi / 18
+
+    # print max_val, max_val2
+
+    if max_val * 0.8 < max_val2:
+        # print (convert(max_ind), convert(max_ind2))
+        return (convert(max_ind), convert(max_ind2))
+    else:
+        # print convert(max_ind)
+        return (convert(max_ind),)
+
+
+def stitch(ksize, *args):
+    assert args == 2, 'stitch() only supporet two images!'
+
+    features = []
+    for img in args:
+        # Detect harris corner
+        cornerness = harris_corner(img, ksize)
+        is_corner = cornerness > 0.0001
+        suppress = non_max_suppression(cornerness, ksize=ksize)
+        result = np.array(is_corner * suppress)
+        indices = np.where(result)
+
+        # Extract the feature
+        features = []
+        for ind in indices:
+            features.append(sift_descriptor(img, ind, 5 * ksize))
