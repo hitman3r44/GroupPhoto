@@ -4,6 +4,8 @@ import scipy.sparse
 import scipy.sparse.linalg
 from math import ceil, exp, pi, cos, sin
 from scipy.ndimage import convolve1d, gaussian_filter
+from sklearn.neighbors import NearestNeighbors
+from helper import draw_cross
 
 LINEAR = 'ydwCv_linear'
 NEAREST = 'ydwCv_nearst'
@@ -310,6 +312,7 @@ def sift_descriptor(img, pt, ksize):
     for i in range(indices.shape[0]):
         hist[indices[i] % 36] += mag[i]
 
+    # print indices
     # print roi
     # print gx
     # print gy
@@ -337,8 +340,13 @@ def sift_descriptor(img, pt, ksize):
 
     if max_val * 0.8 < max_val2:
         directions = (convert(max_ind), convert(max_ind2))
+        lengths = (hist[max_ind], hist[max_ind2])
     else:
         directions = (convert(max_ind),)
+        lengths = (hist[max_ind],)
+
+    # return directions, lengths
+    # print directions, lengths
 
     descriptors = np.ndarray((len(directions), 128), np.float)
     for seq, theta in enumerate(directions):
@@ -347,7 +355,7 @@ def sift_descriptor(img, pt, ksize):
         idx = 0
         for i in range(0, 16, 4):
             for j in range(0, 16, 4):
-                roi = block[i:i+4, j:j+4]
+                roi = block[i:i + 4, j:j + 4]
                 gx, gy = gradient(roi)
                 mag = (np.sqrt(gx * gx + gy * gy)).flatten()
                 ang = (np.arctan2(gy, gx) / pi * 180).flatten()
@@ -357,13 +365,13 @@ def sift_descriptor(img, pt, ksize):
                 for k in range(indices.shape[0]):
                     hist[indices[k] % 8] += mag[k]
 
-                descriptor[idx:idx+8] = hist[:]
+                descriptor[idx:idx + 8] = hist[:]
                 idx += 8
         assert idx == 128, 'Error!'
         descriptor = descriptor / np.linalg.norm(descriptor)
         descriptors[seq, :] = descriptor[:]
 
-    print descriptors
+    return descriptors
 
 
 def gen_block(img, pt, theta):
@@ -398,19 +406,127 @@ def texture(mat, row, col):
         return mat[r][c] * ra * ca + mat[r][c + 1] * ra * cb + mat[r + 1][c] * rb * ca + mat[r + 1][c + 1] * rb * cb
 
 
-def stitch(ksize, *args):
-    assert args == 2, 'stitch() only supporet two images!'
+def stitch(ksize, images):
+    assert len(images) == 2, 'stitch() only supporet two images!'
 
-    features = []
-    for img in args:
+    desc_of_imgs = []
+    indc_of_imgs = []
+    for img in images:
         # Detect harris corner
         cornerness = harris_corner(img, ksize)
-        is_corner = cornerness > 0.0001
+        is_corner = cornerness > 0.001
         suppress = non_max_suppression(cornerness, ksize=ksize)
         result = np.array(is_corner * suppress)
-        indices = np.where(result)
+        indices = np.transpose(np.where(result))
 
+        desc = np.ndarray((0, 128), np.float)
+        indc = np.ndarray((0, 2), np.integer)
         # Extract the feature
-        features = []
         for ind in indices:
-            features.append(sift_descriptor(img, ind, 5 * ksize))
+            descriptor = sift_descriptor(img, ind, 5 * ksize)
+            desc = np.vstack((desc, descriptor))
+            indc = np.vstack((indc, np.tile(ind, (2, 1))))
+
+        desc_of_imgs.append(desc)
+        indc_of_imgs.append(indc)
+        print desc.shape
+        print indices.shape
+
+    desc1, desc2 = desc_of_imgs[0], desc_of_imgs[1]
+    indc1, indc2 = indc_of_imgs[0], indc_of_imgs[1]
+    nbrs = NearestNeighbors(n_neighbors=2).fit(desc2)
+
+    dists, inds = nbrs.kneighbors(desc1)
+    result1 = np.zeros_like(images[0])
+    result2 = np.zeros_like(images[1])
+    for i in range(desc1.shape[0]):
+        if dists[i][0] / dists[i][1] < 0.6:
+            result1[indc1[i][0], indc1[i][1]] = 1
+            result2[indc2[inds[i][0]][0], indc2[inds[i][0]][1]] = 1
+            # print dists[i], indc1[i], indc2[inds[i][0]]
+
+    ptnum = 5
+
+    dist_ind = np.argsort(dists[:, 0])
+    ptx = [indc1[dist_ind[i]] for i in range(ptnum)]
+    pty = [indc2[inds[dist_ind[i]][0]] for i in range(ptnum)]
+
+    print ptx
+    print pty
+    print dists[dist_ind[0:3]]
+
+    mat_a = np.zeros((2 * ptnum, 6), np.float)
+    vec_b = np.zeros((2 * ptnum), np.float)
+    for i in range(ptnum):
+        mat_a[2 * i][0] = mat_a[2 * i + 1][2] = pty[i][0]
+        mat_a[2 * i][1] = mat_a[2 * i + 1][3] = pty[i][1]
+        mat_a[2 * i][4] = mat_a[2 * i + 1][5] = 1
+        vec_b[2 * i] = ptx[i][0]
+        vec_b[2 * i + 1] = ptx[i][1]
+    vec_x = np.linalg.lstsq(mat_a, vec_b)[0]
+
+    mat_m = np.zeros((2, 2), np.float)
+    vec_t = np.zeros((2), np.float)
+    mat_m[0][0] = vec_x[0]
+    mat_m[0][1] = vec_x[1]
+    mat_m[1][0] = vec_x[2]
+    mat_m[1][1] = vec_x[3]
+    vec_t[0] = vec_x[4]
+    vec_t[1] = vec_x[5]
+
+    # Debug
+
+    # zero1, zero2 = np.zeros_like(result1), np.zeros_like(result2)
+    result1 = np.zeros_like(images[0])
+    result2 = np.zeros_like(images[1])
+
+    for i in range(ptnum):
+        result1[ptx[i][0], ptx[i][1]] = 1
+        result2[pty[i][0], pty[i][1]] = 1
+
+    gray_img1 = np.dstack((images[0], images[0], draw_cross(result1) + images[0]))
+    gray_img2 = np.dstack((images[1], images[1], draw_cross(result2) + images[1]))
+    cv2.imshow('result1', gray_img1)
+    cv2.imshow('result2', gray_img2)
+    cv2.waitKey()
+
+    return mat_m, vec_t
+
+
+def affine(img, mat_m, vec_t):
+    h, w = img.shape
+    pt0 = np.array([0, 0], dtype=np.float)
+    pt1 = np.array([h - 1, 0], dtype=np.float)
+    pt2 = np.array([0, w - 1], dtype=np.float)
+    pt3 = np.array([h - 1, w - 1], dtype=np.float)
+    pt0_t, pt1_t, pt2_t, pt3_t = mat_m.dot(pt0) + vec_t, mat_m.dot(
+        pt1) + vec_t, mat_m.dot(pt2) + vec_t, mat_m.dot(pt3) + vec_t
+
+    # print mat_m
+    # print vec_t
+
+    # print '======'
+    # print pt0, pt1, pt2, pt3
+    # print '======'
+    # print pt0_t, pt1_t, pt2_t, pt3_t
+    # print '======'
+
+    minx, miny = min((pt0_t[0], pt1_t[0], pt2_t[0], pt3_t[0])), min(pt0_t[1], pt1_t[1], pt2_t[1], pt3_t[1])
+    maxx, maxy = max((pt0_t[0], pt1_t[0], pt2_t[0], pt3_t[0])), max(pt0_t[1], pt1_t[1], pt2_t[1], pt3_t[1])
+
+    # print minx, miny, maxx, maxy
+    hh, ww = int(ceil(maxx - minx)), int(ceil(maxy - miny))
+
+    # print hh, ww
+
+    ret = np.ndarray((hh, ww), np.float)
+
+    mat_m_r = np.linalg.inv(mat_m)
+    vec_t_r = mat_m_r.dot(-vec_t)
+
+    for i in range(hh):
+        for j in range(ww):
+            rij = mat_m_r.dot(np.asarray([i + minx, j + miny])) + vec_t_r
+            ret[i][j] = texture(img, rij[0], rij[1])
+
+    return ret, [minx, miny]

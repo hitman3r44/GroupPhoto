@@ -73,6 +73,28 @@
                     ],
                     "name": "test_gen_block",
                     "working_dir": "${project_path:}/test"
+                },
+                {
+                    "cmd":
+                    [
+                        "python",
+                        "-m",
+                        "unittest",
+                        "ydw_cv_test.YdwCvTest.test_stitch"
+                    ],
+                    "name": "test_stitch",
+                    "working_dir": "${project_path:}/test"
+                },
+                {
+                    "cmd":
+                    [
+                        "python",
+                        "-m",
+                        "unittest",
+                        "ydw_cv_test.YdwCvTest.test_affine"
+                    ],
+                    "name": "test_affine",
+                    "working_dir": "${project_path:}/test"
                 }
             ],
             "working_dir": "${project_path:}"

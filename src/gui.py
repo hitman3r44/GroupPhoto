@@ -1,10 +1,11 @@
 import os
-from cv2 import namedWindow, imshow, moveWindow, setMouseCallback, waitKey, EVENT_LBUTTONUP, EVENT_RBUTTONUP, imread
+from cv2 import namedWindow, moveWindow, setMouseCallback, waitKey, EVENT_LBUTTONUP, EVENT_RBUTTONUP, imread
 from ydw_cv import *
 from PyQt4.QtGui import QMainWindow, QFileDialog, QStandardItem, QStandardItemModel, QPixmap, QImage
 from PyQt4 import QtCore
 from PyQt4.QtCore import QObject
 from main_win import Ui_main_win
+from helper import *
 
 PLACE_HOLDER = 'res/placeholder.png'
 
@@ -66,11 +67,11 @@ class GroupPhotoWindow(QMainWindow, Ui_main_win):
         i = 0
         images = []
         while self.image_model.item(i):
-            i += 1
-            filepath = self.image_model.item(i, 1)
-            image = image_to_gray(convert_to_pfm(imread(unicode(filepath))))
+            file_path = self.image_model.item(i, 1).text()
+            image = image_to_gray(convert_to_pfm(imread(unicode(file_path))))
             images.append(image)
-        stitch(images)
+            i += 1
+        stitch(self.ksize_slider.value(), images)
 
     def set_pixmap(self, pixmap):
         self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio))
@@ -87,16 +88,3 @@ def image_from_ndarray(mat):
     bgra[..., 2] = a[..., 2]
     bgra[..., 3].fill(255)
     return QImage(bgra.data, w, h, QImage.Format_RGB32)
-
-
-def draw_cross(mat):
-    [h, w] = mat.shape
-    mat_u1 = np.roll(mat, 1, axis=0)
-    mat_u2 = np.roll(mat_u1, 1, axis=0)
-    mat_d1 = np.roll(mat, -1, axis=0)
-    mat_d2 = np.roll(mat_d1, -1, axis=0)
-    mat_l1 = np.roll(mat, 1, axis=1)
-    mat_l2 = np.roll(mat_l1, 1, axis=1)
-    mat_r1 = np.roll(mat, -1, axis=1)
-    mat_r2 = np.roll(mat_r1, -1, axis=1)
-    return mat + mat_u1 + mat_u2 + mat_d1 + mat_d2 + mat_l1 + mat_l2 + mat_r1 + mat_r2

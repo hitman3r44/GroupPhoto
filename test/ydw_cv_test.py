@@ -40,29 +40,32 @@ class YdwCvTest(unittest.TestCase):
         print gaussian(5, 3)
 
     def test_sift_descriptor(self):
-        # self.image = np.zeros((100, 100), np.float)
-        # for i in range(25, 76):
-        #     for j in range(25, 76):
-        #         self.image[i][j] = 1.0
+        # image = image_to_gray(convert_to_pfm(imread('../res/group_rotate28.jpg')))
+        image = image_to_gray(convert_to_pfm(imread('../res/group1.png')))
+        image2 = image_to_gray(convert_to_pfm(imread('../res/group1_r.png')))
 
-        ksize = 1
-        cornerness = harris_corner(self.image, ksize)
-        is_corner = cornerness > 0.000001
+        ksize = 2
+        cornerness = harris_corner(image, ksize)
+        is_corner = cornerness > 0.0001
         suppress = non_max_suppression(cornerness, ksize=ksize)
-        # imshow('image with non_max_suppression', np.array(is_corner * suppress) + self.image)
+        # imshow('image with non_max_suppression', np.array(is_corner * suppress) + image)
         # waitKey()
         result = np.array(is_corner * suppress)
         indices = np.transpose(np.where(result))
+        print 'indices[0]: {}'.format(indices[0])
+        sift_descriptor(image, indices[0], ksize * 5)
+        sift_descriptor(image2, (indices[0][1], indices[0][0]), ksize * 5)
 
-        # '''
-        # new_image = self.image.copy()
+        '''
+        new_image = image.copy()
         for ind in indices:
-            descriptor = sift_descriptor(self.image, ind, ksize * 5)
-            # for direct in direction:
-                # draw_direction(new_image, ind, direct)
-        # imwrite('output2.png', new_image * 256)
-        # '''
-        # direction = sift_descriptor(self.image, indices[0], 3)
+            directions, lengths = sift_descriptor(image, ind, ksize * 5)
+            for i, direct in enumerate(directions):
+                draw_direction(new_image, ind, direct, lengths[i])
+        imshow('result', new_image)
+        imwrite('result2.jpg', new_image * 256)
+        waitKey()
+        '''
 
     def test_texture(self):
         new_image = np.zeros((800, 800), np.float)
@@ -81,14 +84,41 @@ class YdwCvTest(unittest.TestCase):
                 mat[i][j] = i + j
         print gen_block(mat, (50, 50), -pi / 4.0)
 
+    def test_stitch(self):
+        # image_color1 = convert_to_pfm(imread('../res/input1_compressed.jpg'))
+        # image_color2 = convert_to_pfm(imread('../res/input2_compressed.jpg'))
+        image_color1 = convert_to_pfm(imread('../res/group1.png'))
+        image_color2 = convert_to_pfm(imread('../res/group1_r.png'))
+        image1 = image_to_gray(image_color1)
+        image2 = image_to_gray(image_color2)
+
+        mat_m, vec_t = stitch(2, [image1, image2])
+
+        image2_, shift = affine(image2, mat_m, vec_t)
+        imshow('image2_trans', image2_)
+        waitKey()
+
+    def test_affine(self):
+        image_color1 = convert_to_pfm(imread('../res/group1.jpg'))
+        image1 = image_to_gray(image_color1)
+        mat_m = np.ndarray((2, 2), np.float)
+        mat_m[0][0], mat_m[1][0], mat_m[0][1], mat_m[1][1] = 0.2, 1.4, -0.3, 0.7
+        vec_t = np.zeros((2), np.float)
+        aff, pt = affine(image1, mat_m, vec_t)
+
+        # print pt
+        # print 'aff.shape: ', aff.shape
+        imshow('aff', aff)
+        waitKey()
+
     def tearDown(self):
         pass
 
 
-def draw_direction(mat, pos, direct):
+def draw_direction(mat, pos, direct, length):
     h, w = mat.shape
     r, c = pos
-    radius = 16
+    radius = int(4 * length)
     if radius > r:
         radius = r
     if radius > c:

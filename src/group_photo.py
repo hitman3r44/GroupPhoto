@@ -1,5 +1,4 @@
 import sys
-import argparse
 from gui import *
 from PyQt4 import QtGui
 
